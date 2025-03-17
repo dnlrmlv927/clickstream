@@ -1,0 +1,21 @@
+{
+  "name": "clickhouse-connector",
+  "config": {
+    "connector.class": "com.clickhouse.kafka.connect.ClickHouseSinkConnector",
+    "tasks.max": "1",
+    "database": "clickstream",
+    "hostname": "clickhouse",
+    "port": "8123",
+    "ssl": "false",
+    "username": "admin",
+    "password": "admin",
+    "topics": "clicks",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "topic2TableMap": "clicks=clicks",
+    "batch.size": "1000",
+    "queue.max.capacity": "10000",
+    "auto.create.tables": "true"
+  }
+}

@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka_network
+
+  kafka_1:
+    image: bitnami/kafka:latest
+    container_name: kafka_1
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka_1:9092
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka_network
+
+  kafka_2:
+    image: bitnami/kafka:latest
+    container_name: kafka_2
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka_2:9093
+    ports:
+      - "9093:9093"
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka_network
+
+  kafka_3:
+    image: bitnami/kafka:latest
+    container_name: kafka_3
+    environment:
+      - KAFKA_BROKER_ID=3
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka_3:9094
+    ports:
+      - "9094:9094"
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka_network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka_1:9092,kafka_2:9093,kafka_3:9094
+    depends_on:
+      - kafka_1
+      - kafka_2
+      - kafka_3
+    networks:
+      - kafka_network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"  # HTTP порт
+      - "9000:9000"  # TCP порт
+    environment:
+      - CLICKHOUSE_USER=admin
+      - CLICKHOUSE_PASSWORD=admin
+    networks:
+      - kafka_network
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:latest
+    container_name: kafka-connect
+    hostname: connect
+    ports:
+      - "8083:8083"
+    environment:
+      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
+      - CONNECT_BOOTSTRAP_SERVERS=kafka_1:9092,kafka_2:9093,kafka_3:9094
+      - CONNECT_GROUP_ID="clickhouse-sink-group"
+      - CONNECT_CONFIG_STORAGE_TOPIC=connect-configs
+      - CONNECT_OFFSET_STORAGE_TOPIC=connect-offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=connect-status
+      - CONNECT_REST_PORT=8083
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_PLUGIN_PATH=/etc/kafka-connect
+
+    volumes:
+      - ./connect:/etc/kafka-connect
+    depends_on:
+      - zookeeper
+      - kafka_1
+      - kafka_2
+      - kafka_3
+      - clickhouse
+    networks:
+      - kafka_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - clickhouse
+    networks:
+      - kafka_network
+
+networks:
+  kafka_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br0
