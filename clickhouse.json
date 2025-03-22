@@ -1,5 +1,5 @@
 {
-  "name": "clickhouse-connector",
+  "name": "clickhouse-connect-two",
   "config": {
     "connector.class": "com.clickhouse.kafka.connect.ClickHouseSinkConnector",
     "tasks.max": "1",
